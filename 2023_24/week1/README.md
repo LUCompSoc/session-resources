@@ -2,6 +2,6 @@
 
 Resources for week 1.
 
-- Easy: Build your own Ethernet Cable
-- Hard: Build your own HTTP Server
+- Easy: [Build your own Ethernet Cable](./easy/)
+- Hard: [Build your own HTTP Server](./hard)
 
