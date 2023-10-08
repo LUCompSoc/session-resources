@@ -1,2 +1,4 @@
 # session-resources
-Resources for CompSoc sessions and workshops
+
+Resources for CompSoc sessions and workshops.
+
