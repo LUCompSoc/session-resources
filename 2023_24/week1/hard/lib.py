@@ -1,147 +1,68 @@
-from __future__ import annotations
+import socketserver
+from typing import Any, Iterable, NamedTuple, Optional
 
-import socket
-import warnings
-from collections.abc import Callable
-from dataclasses import dataclass, field
-from enum import Enum
+__all__ = [
+    'RequestHandler', 'Request',
+    'main', 'start_server',
+]
 
 
-# DNS Record Type
-class DNSRecordType(Enum):
-    UNKNOWN = 0
-    A = 1           # IPv4 address
-    AAAA = 28       # IPv6 address
-    CNAME = 5       # Canonical name
-    MX = 15         # Mail exchange
-    NS = 2          # Name server
-    PTR = 12        # Pointer
-    SOA = 6         # Start of authority
-    SRV = 33        # Service locator
-    TXT = 16        # Text
-    OPT = 41
+class RequestHandler(socketserver.StreamRequestHandler):
+    def read(self, count: int) -> str:
+        """Reads `count` characters from the TCP stream"""
+        return self.rfile.read(count).decode()
 
-    @classmethod
-    def from_int(cls, value: int) -> DNSRecordType:
+    def readline(self) -> str:
+        """Reads a line from the TCP stream"""
+        return self.rfile.readline().strip().decode()
+
+    def write(self, data: str):
+        """Writes a string to the TCP stream"""
+        self.wfile.write(data.encode())
+
+    def writeline(self, line: str):
+        """Writes a line to the TCP stream, adding the appropriate line ending"""
+        self.wfile.write(f'{line}\r\n'.encode())
+
+    def writelines(self, lines: Iterable[str]):
+        """Write multiple lines to the TCP stream, adding the appropriate line endings"""
+        self.wfile.write(b'\r\n'.join(line.encode() for line in lines))
+
+    @property
+    def address(self) -> tuple[str, int]:
+        return self.server.server_address  # type: ignore
+
+    @property
+    def hosts(self) -> set[str]:
+        host, port = self.address
+        hosts = {f'{host}:{port}'}
+        if host == '127.0.0.1':
+            hosts.add(f'localhost:{port}')
+        return hosts
+
+
+class Request(NamedTuple):
+    method: str
+    url: str
+    version: str
+    headers: dict[str, Any]
+    body: Any
+
+
+def start_server(handler, host: Optional[str] = None, port: int = 0):
+    host = host or 'localhost'
+    with socketserver.TCPServer((host, port), handler) as server:
+        server.allow_reuse_port = True
+        port = server.server_address[1]
+        print(f'Starting server on {host}:{port}')
+        with open('address', 'w') as f:
+            f.write(f'{host}:{port}')
         try:
-            return cls(value)
-        except ValueError:
-            warnings.warn(f'Unknown DNS record type {value}')
-            return cls.UNKNOWN
+            server.serve_forever()
+        except KeyboardInterrupt:
+            print('\nServer shutting down')
+            server.shutdown()
 
 
-# DNS Class
-class DNSClass(Enum):
-    UNKNOWN = 0
-    IN = 1
-    CH = 3  # Chaosnet
-    HS = 4  # Hesiod
-    NONE = 254  # NONE (used in dynamic updates)
-    ANY = 255  # Wildcard match for all classes
-
-    @classmethod
-    def from_int(cls, value: int) -> DNSClass:
-        try:
-            return cls(value)
-        except ValueError:
-            warnings.warn(f'Unknown DNS class {value}')
-            return cls.UNKNOWN
-
-
-# Enum for DNS OPCODE (Operation Code)
-class DNSOpcode(Enum):
-    QUERY = 0
-    IQUERY = 1
-    STATUS = 2
-    NOTIFY = 4
-    UPDATE = 5
-
-
-@dataclass
-class DNSFlags:
-    is_response: bool  # 'Query' (0) / 'Response' (1)
-    opcode: DNSOpcode  # Operation Code (4 bits)
-    is_authoritative_answer: bool  # 'Authoritative Answer'
-    is_truncated: bool  # 'Truncation'
-    is_recursion_desired: bool  # 'Recursion Desired'
-    is_recursion_available: bool  # 'Recursion Available'
-    response_code: int  # 'Response Code' (4 bits)
-
-
-# DNS Header
-@dataclass
-class DNSHeader:
-    transaction_id: int
-    flags: DNSFlags
-    question_count: int
-    answer_count: int
-    authority_count: int
-    additional_count: int
-
-
-# DNS Question
-@dataclass
-class DNSQuestion:
-    name: str
-    typ: DNSRecordType
-    cls: DNSClass
-
-
-# DNS Resource Record (RR)
-@dataclass
-class DNSResourceRecord:
-    name: str
-    typ: DNSRecordType
-    cls: DNSClass
-    ttl: int
-    data_length: int
-    data: bytes
-
-
-# DNS Message
-@dataclass
-class DNSMessage:
-    header: DNSHeader
-    questions: list = field(default_factory=list)
-    answers: list = field(default_factory=list)
-    authorities: list = field(default_factory=list)
-    additional: list = field(default_factory=list)
-
-
-# DNS Server
-def dns_server(handler_func: Callable[[bytes], bytes]):
-    DNS_SERVER_IP = '0.0.0.0'
-    
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as server_socket:
-        server_socket.bind((DNS_SERVER_IP, 0))
-        _, server_port = server_socket.getsockname()
-        print(f'DNS server listening on {DNS_SERVER_IP}:{server_port}')
-
-        while True:
-            try:
-                query_data, client_address = server_socket.recvfrom(1024)
-                response_data = handler_func(query_data)
-                server_socket.sendto(response_data, client_address)
-                print(f'Response sent to {client_address}')
-            except KeyboardInterrupt:
-                break
-
-
-class UpstreamServer:
-    def __init__(self, host: str, port: int = 53) -> None:
-        self.host = host
-        self.port = port
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-    def __enter__(self) -> UpstreamServer:
-        self._socket.connect((self.host, self.port))
-        return self
-
-    def __exit__(self, *_) -> bool:
-        self._socket.close()
-        return False
-
-    def query(self, data: bytes) -> bytes:
-        self._socket.sendall(data)
-        return self._socket.recv(1024)
+main = start_server
 
