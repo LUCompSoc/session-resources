@@ -6,6 +6,8 @@ from . import ai
 from .entity import Entity
 from .map import SIZE, MAP, WIDTH, HEIGHT
 
+MAX_ENTITIES = 50
+
 
 class Application:
     def __init__(self, ai_handler):
@@ -37,7 +39,7 @@ class Application:
         pg.display.flip()
 
     def update(self):
-        if random.random() < 0.1 and not len(self.entities):
+        if len(self.entities) < MAX_ENTITIES and random.random() < 0.1:
             self.entities.append(Entity((WIDTH // 2, HEIGHT // 2 - 10), ai.any()))
         for entity in self.entities:
             entity.update(
