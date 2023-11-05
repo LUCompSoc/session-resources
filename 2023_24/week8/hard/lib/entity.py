@@ -25,6 +25,7 @@ class Entity:
         self.ai = ai
         self.__pos = pos
         self.__heading = 0
+        self.__health = 10
         self.radius = 5
         self.is_enemy = is_enemy
         self.action_history = deque()
@@ -45,7 +46,7 @@ class Entity:
             ),
         )
 
-    def update(self, walls: list[Wall], opponents: list[Entity]):
+    def update(self, walls: list[Wall], opponents: list[Entity], allies: list[Entity]):
         x, y = old_x, old_y = self.__pos
         move_amount = int(self.radius * 0.5)
         action = self.ai(self, walls, opponents)
@@ -63,6 +64,14 @@ class Entity:
                 self.__heading += 0.1
             case Action.TURN_RIGHT:
                 self.__heading -= 0.1
+        for e in opponents:
+            if self.collides_with_entity(e):
+                self.__health -= 0.5
+                e.__health -= 0.5
+        for e in allies:
+            if e is not self and self.collides_with_entity(e):
+                self.__health -= 0.5
+                e.__health -= 0.5
         self.action_history.append(action)
         if len(self.action_history) > MAX_HISTORY_LENGTH:
             self.action_history.popleft()
@@ -92,6 +101,11 @@ class Entity:
             raise NotImplementedError("diagonal line")
         return aligned_axis and min_off_axis and max_off_axis
 
+    def collides_with_entity(self, entity: Entity) -> bool:
+        sx, sy = self.pos
+        ox, oy = entity.pos
+        return (sx - ox) ** 2 + (sy - oy) ** 2 <= (self.radius + entity.radius) ** 2
+
     @property
     def pos(self):
         return self.__pos
@@ -99,3 +113,7 @@ class Entity:
     @property
     def heading(self):
         return self.__heading
+
+    @property
+    def health(self):
+        return self.__health

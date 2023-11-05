@@ -2,9 +2,9 @@ import random
 
 import pygame as pg
 
-from . import ai
+from . import ai, map
 from .entity import Entity
-from .map import SIZE, MAP, WIDTH, HEIGHT
+from .map import SIZE, MAP
 
 MAX_ENTITIES = 50
 
@@ -40,13 +40,17 @@ class Application:
 
     def update(self):
         if len(self.entities) < MAX_ENTITIES and random.random() < 0.1:
-            self.entities.append(Entity((WIDTH // 2, HEIGHT // 2 - 10), ai.any()))
+            self.entities.append(Entity(map.get_random_point(), ai.any()))
         for entity in self.entities:
             entity.update(
                 MAP,
                 [e for e in self.entities if e.is_enemy != entity.is_enemy]
                 + [Entity(pg.mouse.get_pos(), None)],
+                [e for e in self.entities if e.is_enemy == entity.is_enemy],
             )
+        for i, entity in reversed(list(enumerate(self.entities))):
+            if entity.health <= 0:
+                self.entities.pop(i)
 
     def teardown(self):
         pg.quit()

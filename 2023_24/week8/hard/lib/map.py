@@ -1,3 +1,5 @@
+import random
+
 from .wall import Wall
 
 SIZE = WIDTH, HEIGHT = 720, 405
@@ -11,6 +13,7 @@ void_width = WIDTH - 2 * (margin + path_width)
 MAP = [
     Wall((margin, margin), (WIDTH - margin, margin)),
     Wall((WIDTH - margin, margin), (WIDTH - margin, HEIGHT - margin)),
+    Wall((margin, margin), (margin, HEIGHT - margin)),
     Wall((margin, HEIGHT - margin), (WIDTH - margin, HEIGHT - margin)),
     Wall(
         (margin, HEIGHT - margin),
@@ -68,7 +71,6 @@ MAP = [
         (margin + 2 * path_width, margin),
         (margin + 2 * path_width, HEIGHT // 2 - path_width),
     ),
-    Wall((margin, margin + path_width), (margin + path_width, margin + path_width)),
     Wall(
         (
             margin + 3 * path_width // 2 + void_width // 6,
@@ -84,7 +86,7 @@ MAP = [
         (margin + path_width // 2 + void_width // 6, HEIGHT - margin - 3 * path_width),
     ),
     Wall(
-        (margin, HEIGHT - margin - path_width),
+        (margin + path_width, HEIGHT - margin - path_width),
         (margin + path_width // 2 + void_width // 6, HEIGHT - margin - path_width),
     ),
     Wall(
@@ -108,3 +110,10 @@ MAP = [
         (margin + path_width + 2 * void_width // 3, HEIGHT - margin - path_width),
     ),
 ]
+
+
+def get_random_point():
+    return (
+        random.randrange(margin, WIDTH - 2 * margin),
+        random.randrange(margin, HEIGHT - 2 * margin),
+    )

@@ -23,6 +23,7 @@ def random_walk(self, walls: list[Wall], opponents: list[Entity]):
 
 
 def target_player(self: Entity, walls: list[Wall], opponents: list[Entity]):
+    # TODO: boids
     px, py = opponents[0].pos
     sx, sy = self.pos
     dx = px - sx
