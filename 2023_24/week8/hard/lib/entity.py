@@ -46,7 +46,7 @@ class Entity:
         )
 
     def update(self, walls: list[Wall], opponents: list[Entity]):
-        x, y = old_pos = self.__pos
+        x, y = old_x, old_y = self.__pos
         move_amount = int(self.radius * 0.5)
         action = self.ai(self, walls, opponents)
         match action:
@@ -67,8 +67,15 @@ class Entity:
         if len(self.action_history) > MAX_HISTORY_LENGTH:
             self.action_history.popleft()
         self.__pos = x, y
-        if any(self.collides_with_wall(w) for w in walls):
-            self.__pos = old_pos
+        if not any(self.collides_with_wall(w) for w in walls):
+            return
+        self.__pos = old_x, y
+        if not any(self.collides_with_wall(w) for w in walls):
+            return
+        self.__pos = x, old_y
+        if not any(self.collides_with_wall(w) for w in walls):
+            return
+        self.__pos = old_x, old_y
 
     def collides_with_wall(self, wall: Wall) -> bool:
         if wall.a[0] == wall.b[0]:
