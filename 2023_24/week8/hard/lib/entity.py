@@ -6,6 +6,7 @@ from enum import Enum, auto
 
 import pygame as pg
 
+from . import map
 from .wall import Wall
 
 
@@ -93,6 +94,9 @@ class Entity:
         if not any(self.collides_with_wall(w) for w in walls):
             return
         self.__pos = old_x, old_y
+        if not any(self.collides_with_wall(w) for w in walls):
+            return
+        self.__pos = map.get_random_point()
 
     def collides_with_wall(self, wall: Wall) -> bool:
         if wall.a[0] == wall.b[0]:
