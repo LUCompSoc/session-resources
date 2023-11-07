@@ -20,12 +20,15 @@ class Action(Enum):
     TURN_RIGHT = auto()
 
 
+MAX_HEALTH = 10
+
+
 class Entity:
     def __init__(self, pos: tuple[int, int], ai, is_enemy: bool = True) -> None:
         self.ai = ai
         self.__pos = pos
         self.__heading = 0
-        self.__health = 10
+        self.__health = MAX_HEALTH
         self.radius = 5
         self.is_enemy = is_enemy
         self.action_history = deque()
@@ -33,6 +36,12 @@ class Entity:
     def render(self, surface: pg.Surface):
         pg.draw.circle(
             surface, "red" if self.is_enemy else "blue", self.__pos, self.radius
+        )
+        pg.draw.circle(
+            surface,
+            "black",
+            self.__pos,
+            self.radius * (1 - self.__health / MAX_HEALTH),
         )
         move_amount = int(self.radius * 0.5)
         x, y = self.pos
@@ -70,8 +79,7 @@ class Entity:
                 e.__health -= 0.5
         for e in allies:
             if e is not self and self.collides_with_entity(e):
-                self.__health -= 0.5
-                e.__health -= 0.5
+                e.__health -= 0.1
         self.action_history.append(action)
         if len(self.action_history) > MAX_HISTORY_LENGTH:
             self.action_history.popleft()
