@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import inspect
 import math
 from collections import deque
 from enum import Enum, auto
 
 import pygame as pg
+
+from lib.error import IllegalWrite
 
 from . import map
 from .wall import Wall
@@ -19,17 +22,19 @@ class Action(Enum):
     MOVE_RIGHT = auto()
     TURN_LEFT = auto()
     TURN_RIGHT = auto()
+    SHOOT = auto()
 
 
 MAX_HEALTH = 10
 
 
 class Entity:
-    def __init__(self, pos: tuple[int, int], ai, is_enemy: bool = True) -> None:
+    def __init__(self, pos: tuple[float, float], ai, is_enemy: bool = True) -> None:
         self.ai = ai
         self.__pos = pos
         self.__heading = 0
         self.__health = MAX_HEALTH
+        self.__last_shot = 0
         self.radius = 5
         self.is_enemy = is_enemy
         self.action_history = deque()
@@ -57,6 +62,7 @@ class Entity:
         )
 
     def update(self, walls: list[Wall], opponents: list[Entity], allies: list[Entity]):
+        self.__last_shot += 1
         x, y = old_x, old_y = self.__pos
         move_amount = int(self.radius * 0.5)
         action = self.ai(self, walls, opponents)
@@ -74,6 +80,11 @@ class Entity:
                 self.__heading += 0.1
             case Action.TURN_RIGHT:
                 self.__heading -= 0.1
+            case Action.SHOOT:
+                if self.__last_shot < 30:
+                    return
+                self.__last_shot = 0
+                return [Missile(self.pos, self.heading, self)]
         for e in opponents:
             if self.collides_with_entity(e):
                 self.__health -= 0.5
@@ -122,10 +133,62 @@ class Entity:
     def pos(self):
         return self.__pos
 
+    @pos.setter
+    def pos(self, p: tuple[float, float]):
+        if inspect.stack()[1].filename != __file__:
+            raise IllegalWrite(type(self), "pos")
+        self.__pos = p
+
     @property
     def heading(self):
         return self.__heading
 
+    @heading.setter
+    def heading(self, h: float):
+        if inspect.stack()[1].filename != __file__:
+            raise IllegalWrite(type(self), "heading")
+        self.__heading = h
+
     @property
     def health(self):
         return self.__health
+
+    @health.setter
+    def health(self, h: float):
+        if inspect.stack()[1].filename != __file__:
+            raise IllegalWrite(type(self), "health")
+        self.__health = h
+
+
+class Missile(Entity):
+    def __init__(
+        self, pos: tuple[float, float], heading: float, shooter: Entity
+    ) -> None:
+        super().__init__(pos, lambda *_, **__: Action.MOVE_FORWARD, True)
+        self.radius = 2
+        self.heading = heading
+        self.shooter = shooter
+
+    def render(self, surface: pg.Surface):
+        pg.draw.circle(surface, "grey", self.pos, self.radius)
+
+    def update(self, walls: list[Wall], opponents: list[Entity], allies: list[Entity]):
+        x, y = self.pos
+        move_amount = int(self.radius * 0.5)
+        x += move_amount * math.cos(self.heading)
+        y += move_amount * math.sin(self.heading)
+        for e in [*opponents, *allies]:
+            if (
+                not isinstance(e, Missile)
+                and e is not self.shooter
+                and self.collides_with_entity(e)
+            ):
+                e.health -= MAX_HEALTH / 5
+                self.health = 0
+                return
+        self.action_history.append(Action.MOVE_FORWARD)
+        if len(self.action_history) > MAX_HISTORY_LENGTH:
+            self.action_history.popleft()
+        self.pos = x, y
+        if any(self.collides_with_wall(w) for w in walls):
+            self.health = 0

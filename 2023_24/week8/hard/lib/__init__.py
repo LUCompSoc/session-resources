@@ -3,8 +3,11 @@ import random
 import pygame as pg
 
 from . import ai, map
-from .entity import Entity
+from .entity import Action, Entity
 from .map import SIZE, MAP
+from .wall import Wall
+
+__all__ = ["Action", "Entity", "Wall", "main"]
 
 MAX_ENTITIES = 50
 
@@ -15,8 +18,7 @@ class Application:
         self.screen = pg.display.set_mode(SIZE)
         pg.display.set_caption("CompSoc Doom")
         self.clock = pg.time.Clock()
-        self.handle_ai = ai_handler
-        self.entities = []
+        self.entities = [Entity(map.get_random_point(), ai_handler, False)]
 
     def run(self):
         self.running = True
@@ -39,15 +41,20 @@ class Application:
         pg.display.flip()
 
     def update(self):
+        if len([e for e in self.entities if not e.is_enemy]) == 0:
+            self.running = False
+            print("Blue team LOST")
+            return
         if len(self.entities) < MAX_ENTITIES and random.random() < 0.1:
             self.entities.append(Entity(map.get_random_point(), ai.any()))
-        for entity in self.entities:
-            entity.update(
+        for entity in reversed(self.entities):
+            new_entities = entity.update(
                 MAP,
-                [e for e in self.entities if e.is_enemy != entity.is_enemy]
-                + [Entity(pg.mouse.get_pos(), None)],
+                [e for e in self.entities if e.is_enemy != entity.is_enemy],
                 [e for e in self.entities if e.is_enemy == entity.is_enemy],
             )
+            if new_entities:
+                self.entities.extend(new_entities)
         for i, entity in reversed(list(enumerate(self.entities))):
             if entity.health <= 0:
                 self.entities.pop(i)
