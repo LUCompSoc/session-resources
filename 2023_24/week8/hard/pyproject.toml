@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "doom-bot"
+version = "0.1.0"
+description = ""
+authors = ["Jonathan Leeming <president@compsoc.io>"]
+readme = "README.md"
+packages = [{include = "doom_bot"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pygame = "^2.5.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
