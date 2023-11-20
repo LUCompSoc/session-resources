@@ -40,9 +40,8 @@ class Entity:
         self.action_history = deque()
 
     def __setattr__(self, name: str, value) -> None:
-        if name.startswith('_'):
-            if inspect.stack()[1].filename != __file__:
-                raise IllegalWrite(type(self), name)
+        if inspect.stack()[1].filename != __file__:
+            raise IllegalWrite(type(self), name)
         super().__setattr__(name, value)
 
     def render(self, surface: pg.Surface):
