@@ -39,6 +39,13 @@ class Entity:
         self.is_enemy = is_enemy
         self.action_history = deque()
 
+    def __getattribute__(self, name: str):
+        if name == "__dict__":
+            if inspect.stack()[1].filename != __file__:
+                raise IllegalWrite(type(self), name)
+        return super().__getattribute__(name)
+
+
     def __setattr__(self, name: str, value) -> None:
         if inspect.stack()[1].filename != __file__:
             raise IllegalWrite(type(self), name)
