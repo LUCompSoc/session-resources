@@ -3,8 +3,8 @@ name = "doom-bot"
 version = "0.1.0"
 description = ""
 authors = ["Jonathan Leeming <president@compsoc.io>"]
-readme = "README.md"
-packages = [{include = "doom_bot"}]
+# readme = "README.md"
+packages = [{include = "doom-engine", from = "lib"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
